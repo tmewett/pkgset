@@ -1,0 +1,236 @@
+#!/usr/bin/env ruby
+
+require 'set'
+require 'optparse'
+require 'pathname'
+
+CONFIG_DIR = Pathname.new('config')
+SET_DIR = CONFIG_DIR + 'sets'
+INSTALL_DIR = CONFIG_DIR + 'installed-sets'
+
+class PackageSet
+    def initialize(name)
+        @name = name
+        @path = SET_DIR + name
+    end
+
+    def to_s
+        @name
+    end
+
+    def self.[](name)
+        # TODO existence check
+        new(name)
+    end
+
+    def create(pkgs)
+        raise if @path.exist?
+        merge(pkgs)
+    end
+
+    def self.list
+        SET_DIR.children(false).map { |n| self[n.basename] }
+    end
+
+    def self.accumulate(pkgsets)
+        pkgsets.reduce(Set.new) { |a, s| a.merge(s.get) }
+    end
+
+    def self.list_installed
+        INSTALL_DIR.children(false).map { |n| self[n.basename] }
+    end
+
+    def get
+        lines = @path.readlines.map { |line| line.strip }
+        pkgs = lines.reject { |line| line.start_with?('#') or line.empty? }
+        Set.new(pkgs)
+    end
+
+    def mark_installed
+        target = @path.relative_path_from(INSTALL_DIR)
+        (INSTALL_DIR + @name).make_symlink(target)
+    end
+
+    def mark_uninstalled
+        link = INSTALL_DIR + @name
+        link.delete if link.exist?
+    end
+
+    def installed?
+        (INSTALL_DIR + @name).exist?
+    end
+
+    def merge(pkgs)
+        @path.open('a+') do |f|
+            existing = f.readlines.map { |l| l.strip }
+            extra = pkgs - existing
+            f.write(extra.to_a.join("\n"))
+            f.write("\n")
+            return Set.new(extra)
+        end
+    end
+
+    def replace(old_name, new_name)
+        # TODO Line-based to a temp file?
+        old_contents = @path.readlines
+        @path.open('w') do |f|
+            old_contents.each do |line|
+                line = "#{new_name}\n" if line.strip == old_name
+                f.write(line)
+            end
+        end
+    end
+end
+
+class PacmanAPI
+    def list_explicit
+        IO.popen(%w[pacman -Qeq]) do |f|
+            return Set.new(f.readlines.map { |l| l.strip })
+        end
+    end
+
+    def install(pkgs)
+        # TODO xargs
+        puts ['pacman', '-S', '--needed', *pkgs]
+        true
+    end
+
+    def uninstall(pkgs)
+        # TODO xargs
+        puts 'pacman', '-Rn', *pkgs
+        true
+    end
+end
+
+def ensure_dir(path)
+    # TODO full mkdir -p
+    path.mkdir unless path.exist?
+end
+
+def prepare
+    CONFIG_DIR.mkpath
+    SET_DIR.mkpath
+    INSTALL_DIR.mkpath
+
+    # TODO detection
+    $api = PacmanAPI.new
+end
+
+def wrap(text, width)
+    lines = [[]]
+    length = -1
+    text.split.each do |word|
+        lines[-1] << word
+        length += word.length + 1
+        if length > width
+            length = -1
+            lines << []
+        end
+    end
+    lines.map { |l| l.join(' ') }
+end
+
+def puts_columns(left, right)
+    left_margin = 2
+    left_width = 25
+    total_limit = 80
+    out = []
+    right_lines = wrap(right, total_limit - (left_width + left_margin))
+
+    margin = ' ' * left_margin
+    if left.length > left_width
+        puts(margin + left)
+    else
+        puts(margin + left + ' ' * (left_width - left.length) + right_lines.shift)
+    end
+
+    right_lines.each { |line| puts(' ' * (left_width + left_margin) + line) }
+end
+
+case ARGV.shift
+when 'install'
+    prepare
+
+    set_names = ARGV
+    sets = set_names.map do |name|
+        PackageSet[name]
+    end
+
+    to_install = PackageSet.accumulate(sets)
+
+    if $api.install(to_install)
+        sets.each do |set|
+            set.mark_installed
+        end
+    end
+
+when 'add'
+    opts = {}
+    OptionParser.new do |op|
+        op.on('-h', '--help') do
+            puts <<~USAGE
+                Usage: pkgset add [-n] SET PACKAGE...
+
+                Add packages to the given set. If the set is marked as installed, the packages
+                will be installed with the package manager.
+
+                Options:
+                  -n, --new     Create the set and mark it as installed if it doesn't exist
+                  -h, --help    Show this help message
+            USAGE
+            exit
+        end
+        op.on('-n', '--new')
+    end.order!(into: opts)
+
+    prepare
+
+    set_name = ARGV.shift
+    set = if opts[:new]
+        PackageSet.new(set_name)
+    else
+        PackageSet[set_name]
+    end
+
+    packages = ARGV
+
+    to_install = set.merge(packages)
+
+    if set.installed? and not to_install.empty?
+        $api.install(to_install)
+    end
+
+when 'uninstall'
+    prepare
+
+    set_names = ARGV
+    sets = set_names.map do |name|
+        PackageSet[name]
+    end
+
+    remaining_sets = PackageSet.list_installed - sets
+    to_remove = PackageSet.accumulate(sets) - PackageSet.accumulate(remaining_sets)
+
+    if $api.uninstall(to_remove)
+        sets.each do |s|
+            puts "uninstalling set #{s}"
+            s.mark_uninstalled
+        end
+    end
+
+when 'dump'
+    prepare
+
+    set_name = ARGV.shift
+    PackageSet.new(set_name).create($api.list_explicit)
+
+when 'replace-all'
+    prepare
+
+    old_name = ARGV.shift
+    new_name = ARGV.shift
+
+    PackageSet.list.each do |set|
+        set.replace(old_name, new_name)
+    end
+end
