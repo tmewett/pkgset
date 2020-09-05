@@ -11,6 +11,8 @@ INSTALL_DIR = CONFIG_DIR + 'installed-sets'
 class PkgsetError < StandardError; end
 
 class PackageSet
+    attr_reader :name
+
     def initialize(name)
         @name = name
         @path = SET_DIR + name
@@ -19,6 +21,12 @@ class PackageSet
     def to_s
         @name
     end
+
+    def ==(other)
+        @name == other.name
+    end
+
+    alias_method :eql?, :==
 
     def self.[](name)
         # TODO existence check
@@ -33,7 +41,7 @@ class PackageSet
     end
 
     def self.list
-        SET_DIR.children(false).map { |n| self[n.basename] }
+        SET_DIR.children(false).map { |n| self[n.basename.to_s] }
     end
 
     def self.accumulate(pkgsets)
@@ -41,7 +49,7 @@ class PackageSet
     end
 
     def self.list_installed
-        INSTALL_DIR.children(false).map { |n| self[n.basename] }
+        INSTALL_DIR.children(false).map { |n| self[n.basename.to_s] }
     end
 
     def exist?
