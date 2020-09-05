@@ -8,6 +8,8 @@ CONFIG_DIR = Pathname.new('config')
 SET_DIR = CONFIG_DIR + 'sets'
 INSTALL_DIR = CONFIG_DIR + 'installed-sets'
 
+class PkgsetError < StandardError; end
+
 class PackageSet
     def initialize(name)
         @name = name
@@ -20,7 +22,9 @@ class PackageSet
 
     def self.[](name)
         # TODO existence check
-        new(name)
+        s = new(name)
+        raise PkgsetError, "no such set '#{s}'" unless s.exist?
+        s
     end
 
     def create(pkgs)
@@ -38,6 +42,10 @@ class PackageSet
 
     def self.list_installed
         INSTALL_DIR.children(false).map { |n| self[n.basename] }
+    end
+
+    def exist?
+        @path.exist?
     end
 
     def get
@@ -147,90 +155,97 @@ def puts_columns(left, right)
     right_lines.each { |line| puts(' ' * (left_width + left_margin) + line) }
 end
 
-case ARGV.shift
-when 'install'
-    prepare
+def main
+    case ARGV.shift
+    when 'install'
+        prepare
 
-    set_names = ARGV
-    sets = set_names.map do |name|
-        PackageSet[name]
-    end
+        set_names = ARGV
+        sets = set_names.map do |name|
+            PackageSet[name]
+        end
 
-    to_install = PackageSet.accumulate(sets)
+        to_install = PackageSet.accumulate(sets)
 
-    if $api.install(to_install)
-        sets.each do |set|
-            set.mark_installed
+        if $api.install(to_install)
+            sets.each do |set|
+                set.mark_installed
+            end
+        end
+
+    when 'add'
+        opts = {}
+        OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<~USAGE
+                    Usage: pkgset add [-n] SET PACKAGE...
+
+                    Add packages to the given set. If the set is marked as installed, the packages
+                    will be installed with the package manager.
+
+                    Options:
+                    -h, --help    Show this help message
+                USAGE
+                exit
+            end
+            op.on('-n', '--new')
+        end.order!(into: opts)
+
+        prepare
+
+        set_name = ARGV.shift
+        set = if opts[:new]
+            PackageSet.new(set_name)
+        else
+            PackageSet[set_name]
+        end
+
+        packages = ARGV
+
+        to_install = set.merge(packages)
+
+        if set.installed? and not to_install.empty?
+            $api.install(to_install)
+        end
+
+    when 'uninstall'
+        prepare
+
+        set_names = ARGV
+        sets = set_names.map do |name|
+            PackageSet[name]
+        end
+
+        remaining_sets = PackageSet.list_installed - sets
+        to_remove = PackageSet.accumulate(sets) - PackageSet.accumulate(remaining_sets)
+
+        if $api.uninstall(to_remove)
+            sets.each do |s|
+                puts "uninstalling set #{s}"
+                s.mark_uninstalled
+            end
+        end
+
+    when 'dump'
+        prepare
+
+        set_name = ARGV.shift
+        PackageSet.new(set_name).create($api.list_explicit)
+
+    when 'replace-all'
+        prepare
+
+        old_name = ARGV.shift
+        new_name = ARGV.shift
+
+        PackageSet.list.each do |set|
+            set.replace(old_name, new_name)
         end
     end
+end
 
-when 'add'
-    opts = {}
-    OptionParser.new do |op|
-        op.on('-h', '--help') do
-            puts <<~USAGE
-                Usage: pkgset add [-n] SET PACKAGE...
-
-                Add packages to the given set. If the set is marked as installed, the packages
-                will be installed with the package manager.
-
-                Options:
-                  -n, --new     Create the set and mark it as installed if it doesn't exist
-                  -h, --help    Show this help message
-            USAGE
-            exit
-        end
-        op.on('-n', '--new')
-    end.order!(into: opts)
-
-    prepare
-
-    set_name = ARGV.shift
-    set = if opts[:new]
-        PackageSet.new(set_name)
-    else
-        PackageSet[set_name]
-    end
-
-    packages = ARGV
-
-    to_install = set.merge(packages)
-
-    if set.installed? and not to_install.empty?
-        $api.install(to_install)
-    end
-
-when 'uninstall'
-    prepare
-
-    set_names = ARGV
-    sets = set_names.map do |name|
-        PackageSet[name]
-    end
-
-    remaining_sets = PackageSet.list_installed - sets
-    to_remove = PackageSet.accumulate(sets) - PackageSet.accumulate(remaining_sets)
-
-    if $api.uninstall(to_remove)
-        sets.each do |s|
-            puts "uninstalling set #{s}"
-            s.mark_uninstalled
-        end
-    end
-
-when 'dump'
-    prepare
-
-    set_name = ARGV.shift
-    PackageSet.new(set_name).create($api.list_explicit)
-
-when 'replace-all'
-    prepare
-
-    old_name = ARGV.shift
-    new_name = ARGV.shift
-
-    PackageSet.list.each do |set|
-        set.replace(old_name, new_name)
-    end
+begin
+    main
+rescue PkgsetError => exc
+    puts "error: #{exc}"
 end
