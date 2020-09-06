@@ -115,9 +115,11 @@ class PacmanAPI
         true
     end
 
-    def uninstall(pkgs)
+    def uninstall(pkgs, purge:)
         # TODO xargs
-        puts 'pacman', '-Rn', *pkgs
+        cmd = ['pacman', '-R']
+        cmd << '-n' if purge
+        puts cmd + pkgs.to_a
         true
     end
 end
@@ -221,6 +223,11 @@ def main
         end
 
     when 'uninstall'
+        opts = {}
+        OptionParser.new do |op|
+            op.on('-p', '--purge')
+        end.order!(into: opts)
+
         set_names = ARGV
 
         if set_names.empty?
@@ -246,7 +253,7 @@ def main
         remaining_sets = Set.new(PackageSet.list_installed) - to_uninstall
         uninstall_pkgs = PackageSet.accumulate(to_uninstall) - PackageSet.accumulate(remaining_sets)
 
-        if $api.uninstall(uninstall_pkgs)
+        if $api.uninstall(uninstall_pkgs, purge: opts[:purge])
             to_uninstall.each do |s|
                 puts "uninstalling set '#{s}'"
                 s.mark_uninstalled
