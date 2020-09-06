@@ -28,6 +28,10 @@ class PackageSet
 
     alias_method :eql?, :==
 
+    def hash
+        @name.hash
+    end
+
     def self.[](name)
         # TODO existence check
         s = new(name)
@@ -217,19 +221,34 @@ def main
         end
 
     when 'uninstall'
+        set_names = ARGV
+
+        if set_names.empty?
+            raise PkgsetError, "no sets specified"
+        end
+
         prepare
 
-        set_names = ARGV
         sets = set_names.map do |name|
             PackageSet[name]
         end
 
-        remaining_sets = PackageSet.list_installed - sets
-        to_remove = PackageSet.accumulate(sets) - PackageSet.accumulate(remaining_sets)
+        to_uninstall = Set.new
+        sets.each do |set|
+            if set.installed?
+                to_uninstall << set
+            else
+                puts "set '#{set}' not installed, skipping"
+            end
+        end
 
-        if $api.uninstall(to_remove)
-            sets.each do |s|
-                puts "uninstalling set #{s}"
+        # Remove packages in any of the given sets that aren't in any other installed sets.
+        remaining_sets = Set.new(PackageSet.list_installed) - to_uninstall
+        uninstall_pkgs = PackageSet.accumulate(to_uninstall) - PackageSet.accumulate(remaining_sets)
+
+        if $api.uninstall(uninstall_pkgs)
+            to_uninstall.each do |s|
+                puts "uninstalling set '#{s}'"
                 s.mark_uninstalled
             end
         end
