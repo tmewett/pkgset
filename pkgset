@@ -4,7 +4,7 @@ require 'set'
 require 'optparse'
 require 'pathname'
 
-CONFIG_DIR = Pathname.new('config')
+CONFIG_DIR = Pathname.new(ENV['PKGSET_DIR'] || '/etc/pkgset')
 SET_DIR = CONFIG_DIR + 'sets'
 INSTALL_DIR = CONFIG_DIR + 'installed-sets'
 
