@@ -102,6 +102,13 @@ class PackageSet
     end
 end
 
+def xargs(command, args)
+    IO.popen(['xargs', '-0'] + command, 'w') do |f|
+        args.each { |arg| f.write(arg + "\0") }
+    end
+    $?.success?
+end
+
 class PacmanAPI
     def list_explicit
         IO.popen(%w[pacman -Qeq]) do |f|
@@ -110,17 +117,13 @@ class PacmanAPI
     end
 
     def install(pkgs)
-        # TODO xargs
-        puts ['pacman', '-S', '--needed', *pkgs]
-        true
+        xargs(['pacman', '-S', '--needed'], pkgs)
     end
 
     def uninstall(pkgs, purge:)
-        # TODO xargs
         cmd = ['pacman', '-R']
         cmd << '-n' if purge
-        puts cmd + pkgs.to_a
-        true
+        xargs(cmd, pkgs.to_a)
     end
 end
 
