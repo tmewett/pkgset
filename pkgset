@@ -260,11 +260,15 @@ def main
             end
         end
 
-    when 'dump'
+    when 'unadded'
         prepare
 
-        set_name = ARGV.shift
-        PackageSet.new(set_name).create($api.list_explicit)
+        in_set = PackageSet.accumulate(PackageSet.list)
+        in_system = $api.list_explicit
+
+        (in_system - in_set).each do |pkg|
+            puts pkg
+        end
 
     when 'replace-all'
         prepare
