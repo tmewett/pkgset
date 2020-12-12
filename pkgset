@@ -215,23 +215,25 @@ def main
                 exit
             end
             op.on('-n', '--new')
+            op.on('-i', '--installed')
         end.order!(into: opts)
 
         prepare
 
         set_name = ARGV.shift
         set = if opts[:new]
-            PackageSet.new(set_name)
+            s = PackageSet.new(set_name)
+            s.mark_installed if opts[:installed]
+            s
         else
             PackageSet[set_name]
         end
 
         packages = ARGV
 
-        to_install = set.merge(packages)
-
-        if set.installed? and not to_install.empty?
-            $api.install(to_install)
+        # Add if the set is not installed or the package install command succeeds
+        if !set.installed? || $api.install(packages)
+            set.merge(packages)
         end
 
     when 'remove'
