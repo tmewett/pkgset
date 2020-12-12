@@ -90,6 +90,15 @@ class PackageSet
         end
     end
 
+    def remove(pkgs)
+        old_contents = @path.readlines
+        @path.open('w') do |f|
+            old_contents.each do |line|
+                f.write(line) unless pkgs.include?(line.strip)
+            end
+        end
+    end
+
     def replace(old_name, new_name)
         # TODO Line-based to a temp file?
         old_contents = @path.readlines
@@ -223,6 +232,29 @@ def main
 
         if set.installed? and not to_install.empty?
             $api.install(to_install)
+        end
+
+    when 'remove'
+        opts = {}
+        OptionParser.new do |op|
+            op.on('-p', '--purge')
+        end.order!(into: opts)
+
+        set_name = ARGV.shift
+
+        prepare
+
+        set = PackageSet[set_name]
+        packages = ARGV
+
+        # We only need to uninstall packages which aren't in another set
+        other_pkgs = PackageSet.accumulate(PackageSet.list.delete(set))
+        to_uninstall = packages - other_pkgs
+
+        # Remove the selected packages if either the set is uninstalled, or our
+        # package uninstall command works
+        if !set.installed? || $api.uninstall(to_uninstall, purge: opts[:purge])
+            set.remove(packages)
         end
 
     when 'uninstall'
