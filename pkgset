@@ -112,10 +112,8 @@ class PackageSet
 end
 
 def xargs(command, args)
-    IO.popen(['xargs', '-0'] + command, 'w') do |f|
-        args.each { |arg| f.write(arg + "\0") }
-    end
-    $?.success?
+    # TODO implement xargs behaviour
+    system(*(command + args))
 end
 
 class PacmanAPI
