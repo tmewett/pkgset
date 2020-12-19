@@ -123,7 +123,7 @@ def cmd_to_set(command)
 end
 
 class PacmanAPI
-    def list_explicit
+    def explicitly_installed
         cmd_to_set(%w[pacman -Qeq])
     end
 
@@ -144,11 +144,6 @@ class PacmanAPI
     end
 end
 
-def ensure_dir(path)
-    # TODO full mkdir -p
-    path.mkdir unless path.exist?
-end
-
 def prepare
     CONFIG_DIR.mkpath
     SET_DIR.mkpath
@@ -156,37 +151,6 @@ def prepare
 
     # TODO detection
     $api = PacmanAPI.new
-end
-
-def wrap(text, width)
-    lines = [[]]
-    length = -1
-    text.split.each do |word|
-        lines[-1] << word
-        length += word.length + 1
-        if length > width
-            length = -1
-            lines << []
-        end
-    end
-    lines.map { |l| l.join(' ') }
-end
-
-def puts_columns(left, right)
-    left_margin = 2
-    left_width = 25
-    total_limit = 80
-    out = []
-    right_lines = wrap(right, total_limit - (left_width + left_margin))
-
-    margin = ' ' * left_margin
-    if left.length > left_width
-        puts(margin + left)
-    else
-        puts(margin + left + ' ' * (left_width - left.length) + right_lines.shift)
-    end
-
-    right_lines.each { |line| puts(' ' * (left_width + left_margin) + line) }
 end
 
 def main
@@ -309,7 +273,7 @@ def main
         prepare
 
         in_set = PackageSet.accumulate(PackageSet.list)
-        in_system = $api.list_explicit
+        in_system = $api.explicitly_installed
 
         (in_system - in_set).each do |pkg|
             puts pkg
