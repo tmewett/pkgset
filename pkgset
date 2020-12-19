@@ -219,10 +219,12 @@ def main
         prepare
 
         set = PackageSet[set_name]
-        packages = ARGV
+        packages = Set.new(ARGV)
 
         # We only need to uninstall packages which aren't in another set
-        other_pkgs = PackageSet.accumulate(PackageSet.list.delete(set))
+        other_sets = PackageSet.list
+        other_sets.delete(set)
+        other_pkgs = PackageSet.accumulate(other_sets)
         to_uninstall = packages - other_pkgs
 
         # Remove the selected packages if either the set is uninstalled, or our
