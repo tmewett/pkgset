@@ -55,16 +55,18 @@ class PackageSet
         merge(pkgs)
     end
 
-    def self.list
-        SET_DIR.children(false).map { |n| self[n.basename.to_s] }
+    def self.all
+        all = SET_DIR.children(false).map { |n| self[n.basename.to_s] }
+        Set.new(all)
     end
 
     def self.accumulate(pkgsets)
         pkgsets.reduce(Set.new) { |a, s| a.merge(s.get) }
     end
 
-    def self.list_installed
-        INSTALL_DIR.children(false).map { |n| self[n.basename.to_s] }
+    def self.all_installed
+        installed = INSTALL_DIR.children(false).map { |n| self[n.basename.to_s] }
+        Set.new(installed)
     end
 
     def exist?
@@ -226,9 +228,7 @@ def main
         packages = Set.new(ARGV)
 
         # We only need to uninstall packages which aren't in another set
-        other_sets = PackageSet.list
-        other_sets.delete(set)
-        other_pkgs = PackageSet.accumulate(other_sets)
+        other_pkgs = PackageSet.accumulate(PackageSet.all.delete(set))
         to_uninstall = packages - other_pkgs
 
         # Remove the selected packages if either the set is uninstalled, or our
@@ -265,7 +265,7 @@ def main
         end
 
         # Remove packages in any of the given sets that aren't in any other installed sets.
-        remaining_sets = Set.new(PackageSet.list_installed) - to_uninstall
+        remaining_sets = PackageSet.all_installed - to_uninstall
         uninstall_pkgs = PackageSet.accumulate(to_uninstall) - PackageSet.accumulate(remaining_sets)
 
         if $api.uninstall(uninstall_pkgs.to_a, purge: opts[:purge])
@@ -278,7 +278,7 @@ def main
     when 'unadded'
         prepare
 
-        in_set = PackageSet.accumulate(PackageSet.list)
+        in_set = PackageSet.accumulate(PackageSet.all)
         in_system = $api.explicitly_installed
 
         (in_system - in_set).each do |pkg|
@@ -291,7 +291,7 @@ def main
         old_name = ARGV.shift
         new_name = ARGV.shift
 
-        PackageSet.list.each do |set|
+        PackageSet.all.each do |set|
             set.replace(old_name, new_name)
         end
     end
