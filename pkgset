@@ -10,6 +10,10 @@ INSTALL_DIR = CONFIG_DIR + 'installed-sets'
 
 class PkgsetError < StandardError; end
 
+def join_lines(x)
+    x.join("\n") + "\n"
+end
+
 def map_lines(path, &block)
     old_contents = path.readlines
     new_contents = old_contents.map(&block).reject(&:nil?)
@@ -293,6 +297,20 @@ def main
 
         PackageSet.all.each do |set|
             set.replace(old_name, new_name)
+        end
+
+    when 'list'
+        prepare
+
+        if ARGV.empty?
+            lines = PackageSet.all.map do |s|
+                sym = s.installed? ? '*' : ' '
+                "#{sym} #{s.name}"
+            end
+            puts join_lines(lines)
+        else
+            set = PackageSet[ARGV.shift]
+            puts join_lines(set.get.to_a)
         end
     end
 end
