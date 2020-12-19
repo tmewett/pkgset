@@ -10,6 +10,17 @@ INSTALL_DIR = CONFIG_DIR + 'installed-sets'
 
 class PkgsetError < StandardError; end
 
+def map_lines(path, &block)
+    old_contents = path.readlines
+    new_contents = old_contents.map(&block).reject(&:nil?)
+
+    if old_contents != new_contents
+        path.open('w') do |f|
+            f.write(new_contents.join("\n") + "\n")
+        end
+    end
+end
+
 class PackageSet
     attr_reader :name
 
@@ -91,22 +102,15 @@ class PackageSet
     end
 
     def remove(pkgs)
-        old_contents = @path.readlines
-        @path.open('w') do |f|
-            old_contents.each do |line|
-                f.write(line) unless pkgs.include?(line.strip)
-            end
+        map_lines(@path) do |line|
+            line unless pkgs.include?(line.strip)
         end
     end
 
     def replace(old_name, new_name)
-        # TODO Line-based to a temp file?
-        old_contents = @path.readlines
-        @path.open('w') do |f|
-            old_contents.each do |line|
-                line = "#{new_name}\n" if line.strip == old_name
-                f.write(line)
-            end
+        map_lines(@path) do |line|
+            line = "#{new_name}\n" if line.strip == old_name
+            line
         end
     end
 end
