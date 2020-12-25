@@ -142,15 +142,8 @@ class PacmanAPI
         && xargs(['pacman', '-D', '--asexplicit'], pkgs)
     end
 
-    def _unneeded
-        cmd_to_set(%w[pacman -Qdtq])
-    end
-
     def uninstall(pkgs, purge:)
-        cmd = ['pacman', '-R']
-        cmd << '-n' if purge
-        xargs(%w[pacman -D --asdeps], pkgs) \
-        && xargs(cmd, _unneeded.to_a)
+        xargs(%w[pacman -D --asdeps], pkgs)
     end
 end
 
