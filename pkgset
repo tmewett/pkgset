@@ -132,19 +132,29 @@ def cmd_to_set(command)
     end
 end
 
-class PacmanAPI
+class PackageManagerAPI
+    def initialize(program)
+        @program = program
+    end
+end
+
+class PacmanAPI < PackageManagerAPI
     def explicitly_installed
         cmd_to_set(%w[pacman -Qeq])
     end
 
     def install(pkgs)
-        xargs(['pacman', '-S', '--needed'], pkgs) \
-        && xargs(['pacman', '-D', '--asexplicit'], pkgs)
+        xargs([@program, '-S', '--needed'], pkgs) \
+        && xargs([@program, '-D', '--asexplicit'], pkgs)
     end
 
     def uninstall(pkgs, purge:)
-        xargs(%w[pacman -D --asdeps], pkgs)
+        xargs([@program, '-D', '--asdeps'], pkgs)
     end
+end
+
+def which(program)
+    system('which', program, [:out, :err] => '/dev/null')
 end
 
 def prepare
@@ -152,8 +162,12 @@ def prepare
     SET_DIR.mkpath
     INSTALL_DIR.mkpath
 
-    # TODO detection
-    $api = PacmanAPI.new
+    alias_ = ENV['PKGSET_ALIAS']
+    $api = if which('pacman')
+        PacmanAPI.new(alias_ || 'pacman')
+    else
+        raise PkgsetError, "can't find any supported package manager"
+    end
 end
 
 def main
