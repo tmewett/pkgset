@@ -123,7 +123,11 @@ end
 
 def xargs(command, args)
     # TODO implement xargs behaviour
-    system(*(command + args))
+    if !args.empty?
+        system(*(command + args))
+    else
+        true
+    end
 end
 
 def cmd_to_set(command)
