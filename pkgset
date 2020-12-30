@@ -177,6 +177,10 @@ def prepare
     end
 end
 
+def puts_info(str)
+    puts "pkgset: #{str}"
+end
+
 FAILURE = 1
 
 def main
@@ -289,7 +293,7 @@ def main
             if set.installed?
                 to_uninstall << set
             else
-                puts "set '#{set}' not installed, skipping"
+                puts_info "set '#{set}' not installed, skipping"
             end
         end
 
@@ -299,7 +303,7 @@ def main
 
         if $api.uninstall(uninstall_pkgs.to_a, purge: opts[:purge])
             to_uninstall.each do |s|
-                puts "uninstalling set '#{s}'"
+                puts_info "uninstalling set '#{s}'"
                 s.mark_uninstalled
             end
         else
@@ -345,5 +349,5 @@ end
 begin
     main
 rescue PkgsetError => exc
-    puts "error: #{exc}"
+    puts_info "error: #{exc}"
 end
