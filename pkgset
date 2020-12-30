@@ -218,18 +218,20 @@ def main
 
         set_name = ARGV.shift
         set = if opts[:new]
-            s = PackageSet.new(set_name)
-            s.mark_installed if opts[:installed]
-            s
+            PackageSet.new(set_name)
         else
             PackageSet[set_name]
         end
 
+        # Install the set if -n -i are given and the set doesn't exist yet
+        also_install = opts[:new] && opts[:installed] && !set.exist?
+
         packages = ARGV
 
-        # Add if the set is not installed or the package install command succeeds
-        if !set.installed? || $api.install(packages)
+        # Add if either the set is not installed and we shouldn't install it, or the package install command succeeds
+        if (!set.installed? && !also_install) || $api.install(packages)
             set.merge(packages)
+            set.mark_installed if also_install
         end
 
     when 'remove'
