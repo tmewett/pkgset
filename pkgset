@@ -177,7 +177,10 @@ def prepare
     end
 end
 
+FAILURE = 1
+
 def main
+
     case ARGV.shift
     when 'install'
         prepare
@@ -193,6 +196,8 @@ def main
             sets.each do |set|
                 set.mark_installed
             end
+        else
+            exit FAILURE
         end
 
     when 'add'
@@ -232,6 +237,8 @@ def main
         if (!set.installed? && !also_install) || $api.install(packages)
             set.merge(packages)
             set.mark_installed if also_install
+        else
+            exit FAILURE
         end
 
     when 'remove'
@@ -255,6 +262,8 @@ def main
         # package uninstall command works
         if !set.installed? || $api.uninstall(to_uninstall.to_a, purge: opts[:purge])
             set.remove(packages)
+        else
+            exit FAILURE
         end
 
     when 'uninstall'
@@ -293,6 +302,8 @@ def main
                 puts "uninstalling set '#{s}'"
                 s.mark_uninstalled
             end
+        else
+            exit FAILURE
         end
 
     when 'unadded'
