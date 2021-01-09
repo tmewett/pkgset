@@ -238,14 +238,16 @@ Add packages to the given set. If the set is installed, the packages will
 be installed with the package manager.
 
 Options:
-  -n, --new           Create the set if it does not exist
-  -i, --installed     If the set is created by '--new', also install it
-  -h, --help          Show this help message
+  -n, --new             Create the set if it does not exist
+  -i, --installed       If the set is created by '--new', also install it
+  -m, --move            Remove the given packages from all other sets
+  -h, --help            Show this help message
 USAGE
                 exit
             end
             op.on('-n', '--new')
             op.on('-i', '--installed')
+            op.on('-m', '--move')
         end.order!(into: opts)
 
         prepare
@@ -260,14 +262,28 @@ USAGE
         # Install the set if -n -i are given and the set doesn't exist yet
         also_install = opts[:new] && opts[:installed] && !set.exist?
 
-        packages = ARGV
+        packages = Set.new(ARGV)
 
         # Add if either the set is not installed and we shouldn't install it, or the package install command succeeds
-        if (!set.installed? && !also_install) || $api.install(packages)
+        if (!set.installed? && !also_install) || $api.install(packages.to_a)
             set.merge(packages)
             set.mark_installed if also_install
         else
             exit FAILURE
+        end
+
+        if opts[:move]
+            other_sets = PackageSet.all.delete(set)
+            other_pkgs = PackageSet.accumulate(other_sets)
+            moved = packages & other_pkgs
+
+            # If the set is installed, we've already done the packages - so we
+            # only need to ensure we uninstall otherwise
+            if set.installed? || $api.uninstall(moved.to_a, purge: opts[:purge])
+                other_sets.each do |s|
+                    s.remove(moved)
+                end
+            end
         end
 
     when 'remove'
