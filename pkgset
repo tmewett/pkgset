@@ -183,10 +183,33 @@ end
 
 FAILURE = 1
 
+UNINSTALL_MESSAGE = <<-END
+If any packages are no longer in an installed set, they will be marked for
+removal from the system. Use the auto-remove feature of your package manager
+to uninstall them, e.g.
+
+    Arch:   pacman -Rs $(pacman -Qdttq)
+END
+.rstrip
+
 def main
 
     case ARGV.shift
     when 'install'
+        OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<-USAGE
+Usage: pkgset install SET...
+
+Install sets of packages.
+
+Options:
+  -h, --help          Show this help message
+USAGE
+                exit
+            end
+        end.order!
+
         prepare
 
         set_names = ARGV
@@ -208,15 +231,17 @@ def main
         opts = {}
         OptionParser.new do |op|
             op.on('-h', '--help') do
-                puts <<~USAGE
-                    Usage: pkgset add [-n] SET PACKAGE...
+                puts <<-USAGE
+Usage: pkgset add [-n [-i]] SET PACKAGE...
 
-                    Add packages to the given set. If the set is marked as installed, the packages
-                    will be installed with the package manager.
+Add packages to the given set. If the set is installed, the packages will
+be installed with the package manager.
 
-                    Options:
-                    -h, --help    Show this help message
-                USAGE
+Options:
+  -n, --new           Create the set if it does not exist
+  -i, --installed     If the set is created by '--new', also install it
+  -h, --help          Show this help message
+USAGE
                 exit
             end
             op.on('-n', '--new')
@@ -248,6 +273,20 @@ def main
     when 'remove'
         opts = {}
         OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<-USAGE
+Usage: pkgset remove SET PACKAGE...
+
+Remove packages from the given set.
+
+#{UNINSTALL_MESSAGE}
+
+Options:
+  -h, --help          Show this help message
+USAGE
+                exit
+            end
+
             op.on('-p', '--purge')
         end.order!(into: opts)
 
@@ -273,6 +312,19 @@ def main
     when 'uninstall'
         opts = {}
         OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<-USAGE
+Usage: pkgset uninstall SET...
+
+Mark sets as uninstalled.
+
+#{UNINSTALL_MESSAGE}
+
+Options:
+  -h, --help          Show this help message
+USAGE
+                exit
+            end
             op.on('-p', '--purge')
         end.order!(into: opts)
 
@@ -311,6 +363,25 @@ def main
         end
 
     when 'unadded'
+        OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<-USAGE
+Usage: pkgset unadded
+
+List all packages which are explicitly installed on the system, but not in
+any set.
+
+For example, you can capture these into a set with xargs:
+
+    $ pkgset unadded | xargs pkgset add my-set
+
+Options:
+  -h, --help          Show this help message
+USAGE
+                exit
+            end
+        end.order!
+
         prepare
 
         in_set = PackageSet.accumulate(PackageSet.all)
@@ -321,6 +392,20 @@ def main
         end
 
     when 'replace-all'
+        OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<-USAGE
+Usage: pkgset replace-all OLD-PACKAGE NEW-PACKAGE
+
+Replace every occurence of a package in all sets with a new package.
+
+Options:
+  -h, --help          Show this help message
+USAGE
+                exit
+            end
+        end.order!
+
         prepare
 
         old_name = ARGV.shift
@@ -331,6 +416,20 @@ def main
         end
 
     when 'list'
+        OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<-USAGE
+Usage: pkgset list [SET]
+
+List all sets, or the contents of a given set.
+
+Options:
+  -h, --help          Show this help message
+USAGE
+                exit
+            end
+        end.order!
+
         prepare
 
         if ARGV.empty?
