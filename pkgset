@@ -458,6 +458,28 @@ USAGE
             set = PackageSet[ARGV.shift]
             puts join_lines(set.get.to_a)
         end
+
+    when '--help', '-h'
+        puts <<-USAGE
+Usage: pkgset COMMAND [ARGUMENT...]
+
+Manage package sets.
+
+Commands:
+  add
+  remove
+  install
+  uninstall
+  list
+  replace-all
+  unadded
+
+Options:
+  -h, --help          Show this help message
+USAGE
+
+    else
+        raise PkgsetError, "unrecognised command"
     end
 end
 
