@@ -313,8 +313,8 @@ USAGE
         set = PackageSet[set_name]
         packages = Set.new(ARGV)
 
-        # We only need to uninstall packages which aren't in another set
-        other_pkgs = PackageSet.accumulate(PackageSet.all.delete(set))
+        # We only need to uninstall packages which aren't in another installed set
+        other_pkgs = PackageSet.accumulate(PackageSet.all_installed.delete(set))
         to_uninstall = packages - other_pkgs
 
         # Remove the selected packages if either the set is uninstalled, or our
