@@ -133,9 +133,9 @@ def xargs(command, args)
     end
 end
 
-def cmd_to_set(command)
+def cmd_to_list(command)
     IO.popen(command) do |f|
-        return Set.new(f.readlines.map { |l| l.strip })
+        return f.readlines.map { |l| l.strip }
     end
 end
 
@@ -146,12 +146,17 @@ class PackageManagerAPI
 end
 
 class PacmanAPI < PackageManagerAPI
+    def _all_installed
+        cmd_to_list(%w[pacman -Qq])
+    end
+
     def explicitly_installed
-        cmd_to_set(%w[pacman -Qeq])
+        Set.new(cmd_to_list(%w[pacman -Qeq]))
     end
 
     def install(pkgs)
-        xargs([@program, '-S', '--needed'], pkgs) \
+        to_install = pkgs - _all_installed
+        (to_install.empty? || xargs([@program, '-S', '--needed'], to_install)) \
         && xargs([@program, '-D', '--asexplicit'], pkgs)
     end
 
