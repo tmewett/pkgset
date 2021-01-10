@@ -237,7 +237,7 @@ USAGE
         OptionParser.new do |op|
             op.on('-h', '--help') do
                 puts <<-USAGE
-Usage: pkgset add [-n [-i]] SET PACKAGE...
+Usage: pkgset add [-m] [-n [-i]] SET PACKAGE...
 
 Add packages to the given set. If the set is installed, the packages will
 be installed with the package manager.
