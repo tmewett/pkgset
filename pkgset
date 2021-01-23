@@ -200,7 +200,7 @@ END
 def main
 
     case ARGV.shift
-    when 'install'
+    when 'install', 'in'
         OptionParser.new do |op|
             op.on('-h', '--help') do
                 puts <<-USAGE
@@ -232,7 +232,7 @@ USAGE
             exit FAILURE
         end
 
-    when 'add'
+    when 'add', 'a'
         opts = {}
         OptionParser.new do |op|
             op.on('-h', '--help') do
@@ -291,7 +291,7 @@ USAGE
             end
         end
 
-    when 'remove'
+    when 'remove', 'r'
         opts = {}
         OptionParser.new do |op|
             op.on('-h', '--help') do
@@ -330,7 +330,7 @@ USAGE
             exit FAILURE
         end
 
-    when 'uninstall'
+    when 'uninstall', 'un'
         opts = {}
         OptionParser.new do |op|
             op.on('-h', '--help') do
@@ -436,7 +436,7 @@ USAGE
             set.replace(old_name, new_name)
         end
 
-    when 'list'
+    when 'list', 'l'
         OptionParser.new do |op|
             op.on('-h', '--help') do
                 puts <<-USAGE
@@ -471,11 +471,11 @@ Usage: pkgset COMMAND [ARGUMENT...]
 Manage package sets.
 
 Commands:
-  add
-  remove
-  install
-  uninstall
-  list
+  add  (a)
+  remove  (r)
+  install  (in)
+  uninstall  (un)
+  list  (l)
   replace-all
   unadded
 
