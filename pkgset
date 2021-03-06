@@ -437,6 +437,7 @@ USAGE
         end
 
     when 'list', 'l'
+        opts = {}
         OptionParser.new do |op|
             op.on('-h', '--help') do
                 puts <<-USAGE
@@ -446,19 +447,23 @@ List all sets, or the contents of a given set.
 
 Options:
   -h, --help          Show this help message
+  -t, --tree          List contents of all sets when none given
 USAGE
                 exit
             end
-        end.order!
+            op.on('-t', '--tree')
+        end.order!(into: opts)
 
         prepare
 
         if ARGV.empty?
-            lines = PackageSet.all.map do |s|
+            lines = PackageSet.all.each do |s|
                 sym = s.installed? ? '*' : ' '
-                "#{sym} #{s.name}"
+                puts "#{sym} #{s.name}"
+                if opts[:tree]
+                    s.get.each { |pkg| puts "    #{pkg}" }
+                end
             end
-            puts join_lines(lines)
         else
             set = PackageSet[ARGV.shift]
             puts join_lines(set.get.to_a)
