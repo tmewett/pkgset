@@ -10,8 +10,8 @@ INSTALL_DIR = CONFIG_DIR + 'installed-sets'
 
 class PkgsetError < StandardError; end
 
-def join_lines(x)
-    x.join("\n") + "\n"
+def put_lines(xs)
+    xs.each { |x| puts x }
 end
 
 def map_lines(path, &block)
@@ -466,7 +466,7 @@ USAGE
             end
         else
             set = PackageSet[ARGV.shift]
-            puts join_lines(set.get.to_a)
+            put_lines(set.get)
         end
 
     when '--help', '-h'
