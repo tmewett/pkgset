@@ -20,7 +20,7 @@ def map_lines(path, &block)
 
     if old_contents != new_contents
         path.open('w') do |f|
-            f.write(new_contents.join("\n") + "\n")
+            new_contents.each { |l| f.write(l) }
         end
     end
 end
