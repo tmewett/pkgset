@@ -173,6 +173,21 @@ class PacmanAPI < PackageManagerAPI
     end
 end
 
+class AptAPI < PackageManagerAPI
+    def explicitly_installed
+        cmd_to_list(%w[apt-mark showmanual])
+    end
+
+    def install(pkgs)
+        xargs([@program, 'install', '--no-upgrade'], pkgs) \
+            && xargs(['apt-mark', 'manual'], pkgs)
+    end
+
+    def uninstall(pkgs)
+        xargs(['apt-mark', 'auto'], pkgs)
+    end
+end
+
 def which(program)
     system('which', program, [:out, :err] => '/dev/null')
 end
@@ -185,6 +200,8 @@ def prepare
     alias_ = ENV['PKGSET_ALIAS']
     $api = if which('pacman')
         PacmanAPI.new(alias_ || 'pacman')
+    elsif which('apt')
+        AptAPI.new(alias_ || 'apt-get')
     else
         raise PkgsetError, "can't find any supported package manager"
     end
@@ -201,7 +218,8 @@ If any packages are no longer in an installed set, they will be marked for
 removal from the system. Use the auto-remove feature of your package manager
 to uninstall them, e.g.
 
-    Arch:   pacman -Rs $(pacman -Qdttq)
+    Arch:           pacman -Rs $(pacman -Qdttq)
+    Ubuntu/Debian:  apt autoremove
 END
 .rstrip
 

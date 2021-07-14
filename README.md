@@ -18,7 +18,9 @@ more.
 
 pkgset currently supports:
 
-*   Arch Linux.
+*   Ubuntu
+*   Arch Linux
+*   Debian
 
 It is a single executable script, with one dependency: Ruby. So to install it,
 simply install Ruby and copy pkgset to a directory in your path.
