@@ -143,6 +143,14 @@ class PackageManagerAPI
     def initialize(program)
         @program = program
     end
+
+    # Get a set of all explicitly installed packages on the system.
+    def explicitly_installed; raise; end
+    # Install the given array of packages and mark as manual.
+    # Should not upgrade packages if they are already installed.
+    def install(pkgs); raise; end
+    # Mark the given array of packages as auto.
+    def uninstall(pkgs); raise; end
 end
 
 class PacmanAPI < PackageManagerAPI
@@ -157,7 +165,7 @@ class PacmanAPI < PackageManagerAPI
     def install(pkgs)
         to_install = pkgs - _all_installed
         (to_install.empty? || xargs([@program, '-S', '--needed'], to_install)) \
-        && xargs([@program, '-D', '--asexplicit'], pkgs)
+            && xargs([@program, '-D', '--asexplicit'], pkgs)
     end
 
     def uninstall(pkgs)
