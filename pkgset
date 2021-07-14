@@ -160,7 +160,7 @@ class PacmanAPI < PackageManagerAPI
         && xargs([@program, '-D', '--asexplicit'], pkgs)
     end
 
-    def uninstall(pkgs, purge:)
+    def uninstall(pkgs)
         xargs([@program, '-D', '--asdeps'], pkgs)
     end
 end
@@ -284,7 +284,7 @@ USAGE
 
             # If the set is installed, we've already done the packages - so we
             # only need to ensure we uninstall otherwise
-            if set.installed? || $api.uninstall(moved.to_a, purge: opts[:purge])
+            if set.installed? || $api.uninstall(moved.to_a)
                 other_sets.each do |s|
                     s.remove(moved)
                 end
@@ -308,7 +308,6 @@ USAGE
                 exit
             end
 
-            op.on('-p', '--purge')
         end.order!(into: opts)
 
         set_name = ARGV.shift
@@ -324,7 +323,7 @@ USAGE
 
         # Remove the selected packages if either the set is uninstalled, or our
         # package uninstall command works
-        if !set.installed? || $api.uninstall(to_uninstall.to_a, purge: opts[:purge])
+        if !set.installed? || $api.uninstall(to_uninstall.to_a)
             set.remove(packages)
         else
             exit FAILURE
@@ -346,7 +345,6 @@ Options:
 USAGE
                 exit
             end
-            op.on('-p', '--purge')
         end.order!(into: opts)
 
         set_names = ARGV
@@ -374,7 +372,7 @@ USAGE
         remaining_sets = PackageSet.all_installed - to_uninstall
         uninstall_pkgs = PackageSet.accumulate(to_uninstall) - PackageSet.accumulate(remaining_sets)
 
-        if $api.uninstall(uninstall_pkgs.to_a, purge: opts[:purge])
+        if $api.uninstall(uninstall_pkgs.to_a)
             to_uninstall.each do |s|
                 puts_info "uninstalling set '#{s}'"
                 s.mark_uninstalled
