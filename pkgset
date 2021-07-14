@@ -151,7 +151,7 @@ class PacmanAPI < PackageManagerAPI
     end
 
     def explicitly_installed
-        Set.new(cmd_to_list(%w[pacman -Qeq]))
+        cmd_to_list(%w[pacman -Qeq])
     end
 
     def install(pkgs)
@@ -404,7 +404,7 @@ USAGE
         prepare
 
         in_set = PackageSet.accumulate(PackageSet.all)
-        in_system = $api.explicitly_installed
+        in_system = Set.new($api.explicitly_installed)
 
         (in_system - in_set).each do |pkg|
             puts pkg
