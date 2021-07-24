@@ -84,20 +84,19 @@ class PackageSet
     end
 
     def mark_installed
-        link = INSTALL_DIR + @name
-        if !link.symlink?
-            target = @path.relative_path_from(INSTALL_DIR)
-            link.make_symlink(target)
+        file = INSTALL_DIR + @name
+        if !file.exist?
+            file.write('')
         end
     end
 
     def mark_uninstalled
         link = INSTALL_DIR + @name
-        link.delete if link.symlink?
+        link.delete if link.exist?
     end
 
     def installed?
-        (INSTALL_DIR + @name).symlink?
+        (INSTALL_DIR + @name).exist?
     end
 
     def merge(pkgs)
