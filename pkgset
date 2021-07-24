@@ -435,6 +435,33 @@ USAGE
             puts pkg
         end
 
+    when 'apply'
+        OptionParser.new do |op|
+            op.on('-h', '--help') do
+                puts <<-USAGE
+Usage: pkgset apply
+
+Apply the pkgset configuration to the system, i.e. run the package manager so
+that only packages in installed sets are installed.
+
+This can be used after manually editing the set files to make the changes
+take effect.
+
+Options:
+  -h, --help          Show this help message
+USAGE
+                exit
+            end
+        end.order!
+
+        prepare
+
+        in_set = PackageSet.accumulate(PackageSet.all_installed)
+        in_system = Set.new($api.explicitly_installed)
+
+        $api.uninstall((in_system - in_set).to_a) || exit(FAILURE)
+        $api.install((in_set - in_system).to_a) || exit(FAILURE)
+
     when 'replace-all'
         OptionParser.new do |op|
             op.on('-h', '--help') do
@@ -504,6 +531,7 @@ Commands:
   install  (in)
   uninstall  (un)
   list  (l)
+  apply
   replace-all
   unadded
 
