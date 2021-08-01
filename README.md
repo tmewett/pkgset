@@ -25,11 +25,13 @@ pkgset currently supports:
 It is a single executable script, with one dependency: Ruby. So to install it,
 simply install Ruby and copy pkgset to a directory in your path.
 
-## Setup & usage
+## Usage
+
+### Setup
 
 pkgset manages _package sets_ - named collections of packages. When a set is
 "installed," all its contained packages are explicitly installed. You can create
-and modify sets from the command line.
+and modify sets from the command line, or directly via files.
 
 pkgset assumes that all the explicitly-installed packages on your system are
 each in a set - so the first time you use pkgset on a system, you will have to
@@ -44,26 +46,62 @@ so:
 
     $ pkgset unadded | xargs pkgset add -ni base
 
-We can see our created set, and the '*' which indicates it's installed:
+We can see our created set 'base', and the '*' which indicates it's installed:
 
     $ pkgset list
     * base
 
-Now you can start breaking the 'base' set up into other sets:
+Now you can start breaking the 'base' set up into other sets, by using the
+**m**ove flag:
 
     $ pkgset add -mni apps my-web-browser my-text-editor
     $ pkgset add -mni my-project thing gagdet gizmo
 
+    $ pkgset list -t
+    * apps
+        my-web-browser
+        my-text-editor
+    * base
+        ...
+    * my-project
+        thing
+        gagdet
+        gizmo
+
 How you choose to arrange your sets is completely up to you!
+
+### Adding and removing
+
+To install packages, we add them to an (existing or new) installed set.
+
+    $ pkgset add apps some-new-app   # existing
+    $ pkgset add -ni my-other-project package1 package2   # new
+
+The opposite to the `add` command is `remove`.
+
+If we're done with a set, we can uninstall it:
+
+    $ pkgset uninstall my-project
+    ...package manager working...
+    $ pkgset list
+    * apps
+    * base
+      my-project
+
+When you add a package to an installed set, pkgset makes sure it is installed on
+the system by running the package manager. Similarly, when you remove a package
+or uninstall a set, pkgset checks if the packages are in any other installed
+sets and if not, *marks them as unneeded.* You need to do the actual removal
+yourself with the package manager; see `pkgset remove -h`.
+
+### Declarative
+
+If you prefer, you can manage the contents of your sets by editing the files in
+`/etc/pkgset/sets` instead of using the commands. You can even annotate the
+files with comments beginning with `#`. When done, run `pkgset apply` to update
+the configuration.
+
+### More info
 
 For more information, use `-h` or `--help` with any command. `pkgset -h` shows
 all commands.
-
-NOTE: When you add a package to an installed set, pkgset makes sure it is
-installed on the system by running the package manager. Similarly, when you
-remove a package or uninstall a set, pkgset checks which are no longer needed
-and marks them for removal. (You need to do the actual removal yourself; see
-`pkgset remove -h`.)
-
-Hence, you should avoid manually using your package manager to install and
-remove things. You *can* use it - just make sure to sync up the sets afterwards.
